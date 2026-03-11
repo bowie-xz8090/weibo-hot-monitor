@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微博热点监控 | Weibo Hot Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #E6162D;
+            --primary-light: #FF6B6B;
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-light: #666666;
+            --border: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-hover: 0 4px 16px rgba(230,22,45,0.15);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            font-size: 0.85rem;
+        }
+
+        .update-time {
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-btn:hover {
+            background: #d4142a;
+            transform: translateY(-1px);
+        }
+
+        .refresh-btn.spinning svg {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .hot-list {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .list-header {
+            display: grid;
+            grid-template-columns: 60px 1fr 100px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .hot-item {
+            display: grid;
+            grid-template-columns: 60px 1fr 100px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .hot-item:hover {
+            background: #fff5f5;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .hot-item:last-child {
+            border-bottom: none;
+        }
+
+        .rank {
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #f0f0f0;
+        }
+
+        .rank.top1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: white; }
+        .rank.top2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); color: white; }
+        .rank.top3 { background: linear-gradient(135deg, #CD7F32, #B87333); color: white; }
+
+        .title-section {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-left: 10px;
+        }
+
+        .title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .category {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            width: fit-content;
+        }
+
+        .hot-value {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .hot-number {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .tag.boiling { background: #ffe4e4; color: var(--primary); }
+        .tag.hot { background: #fff3e0; color: #ff9800; }
+        .tag.new { background: #e8f5e9; color: #4caf50; }
+        .tag.recommend { background: #e3f2fd; color: #2196f3; }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        .error {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--primary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .list-header {
+                grid-template-columns: 50px 1fr 80px;
+                padding: 12px 15px;
+            }
+            
+            .hot-item {
+                grid-template-columns: 50px 1fr 80px;
+                padding: 12px 15px;
+            }
+            
+            .rank {
+                width: 28px;
+                height: 28px;
+                font-size: 0.9rem;
+            }
+            
+            .title {
+                font-size: 0.9rem;
+            }
+            
+            .hot-number {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">🔥</div>
+                <h1>微博热点监控</h1>
+            </div>
+            <p class="subtitle">实时追踪微博热搜，每分钟自动更新</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="update-time">
+                <span>🕐</span>
+                <span id="updateTime">加载中...</span>
+            </div>
+            <div class="live-indicator">
+                <span class="live-dot"></span>
+                <span>LIVE</span>
+            </div>
+            <button class="refresh-btn" onclick="refreshData()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                </svg>
+                刷新
+            </button>
+        </div>
+
+        <div class="hot-list" id="hotList">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>正在加载热点数据...</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>数据来源: 微博热搜 | 更新时间: 每分钟自动更新</p>
+            <p style="margin-top: 8px;">Built with ❤️ by <a href="https://github.com/bowie-xz8090" target="_blank">Bowie</a></p>
+        </footer>
+    </div>
+
+    <script>
+        const API_URL = '/api/hot';
+        let autoRefreshInterval;
+
+        // 获取热点数据
+        async function fetchHotData() {
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    renderHotList(result.data);
+                } else {
+                    showError('数据加载失败');
+                }
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                showError('网络连接失败，请稍后重试');
+            }
+        }
+
+        // 渲染热点列表
+        function renderHotList(data) {
+            const listEl = document.getElementById('hotList');
+            const updateTimeEl = document.getElementById('updateTime');
+            
+            // 更新时间
+            if (data.update_time) {
+                updateTimeEl.textContent = `更新于 ${data.update_time}`;
+            }
+            
+            // 生成列表HTML
+            let html = `
+                <div class="list-header">
+                    <span>排名</span>
+                    <span>话题</span>
+                    <span style="text-align: right;">热度</span>
+                </div>
+            `;
+            
+            data.items.forEach(item => {
+                const rankClass = item.rank <= 3 ? `top${item.rank}` : '';
+                const tagClass = getTagClass(item.tag);
+                const hotDisplay = formatHotNumber(item.hot);
+                
+                html += `
+                    <a href="${item.link}" target="_blank" class="hot-item">
+                        <div>
+                            <span class="rank ${rankClass}">${item.rank}</span>
+                        </div>
+                        <div class="title-section">
+                            <span class="title">${escapeHtml(item.title)}</span>
+                            ${item.category ? `<span class="category">${escapeHtml(item.category)}</span>` : ''}
+                        </div>
+                        <div class="hot-value">
+                            <span class="hot-number">${hotDisplay}</span>
+                            ${item.tag ? `<span class="tag ${tagClass}">${escapeHtml(item.tag)}</span>` : ''}
+                        </div>
+                    </a>
+                `;
+            });
+            
+            listEl.innerHTML = html;
+        }
+
+        // 获取标签样式类
+        function getTagClass(tag) {
+            if (!tag) return '';
+            if (tag.includes('沸') || tag.includes('爆')) return 'boiling';
+            if (tag.includes('热')) return 'hot';
+            if (tag.includes('新')) return 'new';
+            if (tag.includes('荐')) return 'recommend';
+            return '';
+        }
+
+        // 格式化热度数字
+        function formatHotNumber(num) {
+            if (num >= 10000) {
+                return (num / 10000).toFixed(1) + '万';
+            }
+            return num.toString();
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('hotList').innerHTML = `
+                <div class="error">
+                    <p>😢 ${message}</p>
+                    <button class="refresh-btn" onclick="refreshData()" style="margin-top: 16px;">重新加载</button>
+                </div>
+            `;
+        }
+
+        // 刷新数据
+        function refreshData() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.classList.add('spinning');
+            
+            fetchHotData().then(() => {
+                setTimeout(() => {
+                    btn.classList.remove('spinning');
+                }, 500);
+            });
+        }
+
+        // 启动自动刷新
+        function startAutoRefresh() {
+            // 每分钟刷新一次
+            autoRefreshInterval = setInterval(fetchHotData, 60000);
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchHotData();
+            startAutoRefresh();
+        });
+
+        // 页面可见性变化时控制刷新
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(autoRefreshInterval);
+            } else {
+                fetchHotData();
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html>
